@@ -1,287 +1,370 @@
-// Import required modules
-const fs = require("fs");
+const fs = require("fs").promises;
 const path = require("path");
+const { v4: uuidv4 } = require("uuid");
 
 /**
- * Creates a folder at the specified path.
- * @param {string} folderPath - The path of the folder to be created.
- * @param {function} callback - Callback function to handle errors.
+ * Asynchronously creates a folder with the specified name.
+ * @param {string} folderName - The name of the folder to create.
+ * @returns {Promise<void>} A Promise that resolves when the folder is
+ *  created successfully or rejects with an error.
  */
-function createFolder(folderPath, callback) {
-  fs.mkdir(folderPath, { recursive: true }, (err) => {
-    if (err) {
-      return callback(err);
+async function createFolder(folderName) {
+  try {
+    await fs.mkdir(folderName, { recursive: true });
+
+    console.log("Folder created successfully.");
+  } catch (err) {
+    // Check if folder already exists
+    if (err.code === "EEXIST") {
+      console.log("Folder already exists.");
+    } else {
+      // Handle other errors
+      console.error("Error creating folder:", err);
     }
-    callback(null);
-  });
+  }
 }
 
 /**
- * Creates a file with the specified name in the specified folder.
- * @param {string} folderPath - The path of the folder where the file will be created.
- * @param {string} fileName - The name of the file to be created.
- * @param {function} callback - Callback function to handle errors.
+ * Creates an empty JSON file at the given file path.
+ * @param {string} filePath - The path to the JSON file to create.
  */
-function createFile(folderPath, fileName, callback) {
-  const filePath = path.join(folderPath, fileName);
+async function createJSONFile(filePath) {
+  try {
+    // Check if the file already exists
+    await fs.access(filePath);
 
-  fs.writeFile(filePath, "", (err) => {
-    if (err) {
-      return callback(err);
-    }
-    callback(null);
-  });
+    // If the file exists, log an error and return
+    console.error("Error: File already exists");
+    return;
+  } catch (error) {
+    console.log(error);
+  }
+
+  const jsonData = "{}"; // Empty JSON object
+
+  try {
+    await fs.writeFile(filePath, jsonData);
+    console.log("JSON file created successfully.");
+  } catch (err) {
+    console.error("Error writing JSON file:", err);
+  }
 }
 
 /**
- * Renames a folder.
- * @param {string} oldFolderPath - The current path of the folder to be renamed.
- * @param {string} newFolderPath - The new path for the folder.
- * @param {function} callback - Callback function to handle errors.
+ * Asynchronously updates the name of a folder.
+ * @param {string} oldName - The current name of the folder.
+ * @param {string} newName - The new name for the folder.
+ * @returns {Promise<void>} A Promise that resolves when the folder name is updated successfully or rejects with an error.
  */
-function renameFolder(oldFolderPath, newFolderPath, callback) {
-  fs.rename(oldFolderPath, newFolderPath, (err) => {
-    if (err) {
-      return callback(err);
+async function updateFolderName(oldName, newName) {
+  try {
+    await fs.rename(oldName, newName);
+
+    console.log("Folder name updated successfully.");
+  } catch (err) {
+    // Check if folder does not exist
+    if (err.code === "ENOENT") {
+      console.error("Folder not found.");
+    } else {
+      // Handle other errors
+      console.error("Error updating folder name:", err);
     }
-    callback(null);
-  });
+  }
 }
 
 /**
- * Creates a table schema with the specified headings.
- * @param {string} folderPath - The path of the folder where the schema file will be created.
- * @param {string} fileName - The name of the schema file.
- * @param {Array<string>} headings - An array of table headings.
- * @param {function} callback - Callback function to handle errors.
- */
-function createTableSchema(folderPath, fileName, headings, callback) {
-  const filePath = path.join(folderPath, fileName);
-  const schema = `| ${headings.join(" | ")} |\n`;
-
-  fs.writeFile(filePath, schema, (err) => {
-    if (err) {
-      return callback(err);
-    }
-    callback(null);
-  });
-}
-
-/**
- * Appends object data to a file based on the table schema.
- * @param {string} folderPath - The path of the folder where the file is located.
- * @param {string} fileName - The name of the file to which data will be appended.
- * @param {Array<Object>} dataArray - An array of objects containing data to append.
- * @param {Array<string>} headings - An array of table headings.
- * @param {function} callback - Callback function to handle errors.
- */
-function appendObjectDataToFile(
-  folderPath,
-  fileName,
-  dataArray,
-  headings,
-  callback
-) {
-  const filePath = path.join(folderPath, fileName);
-  let tableData = "";
-
-  dataArray.forEach((data) => {
-    const rowData = `| ${headings
-      .map((heading) => data[heading])
-      .join(" | ")} |\n`;
-    tableData += rowData;
-  });
-
-  fs.appendFile(filePath, tableData, (err) => {
-    if (err) {
-      return callback(err);
-    }
-    callback(null);
-  });
-}
-
-/**
- * Renames a file.
- * @param {string} folderPath - The path of the folder where the file is located.
- * @param {string} oldFileName - The current name of the file to be renamed.
+ * Asynchronously renames a file within a folder.
+ * @param {string} folderPath - The path to the folder containing the file.
+ * @param {string} oldFileName - The current name of the file.
  * @param {string} newFileName - The new name for the file.
- * @param {function} callback - Callback function to handle errors.
+ * @returns {Promise<void>} A Promise that resolves when the file is renamed successfully or rejects with an error.
  */
-function renameFile(folderPath, oldFileName, newFileName, callback) {
+async function renameFileInFolder(folderPath, oldFileName, newFileName) {
   const oldFilePath = path.join(folderPath, oldFileName);
   const newFilePath = path.join(folderPath, newFileName);
 
-  fs.rename(oldFilePath, newFilePath, (err) => {
-    if (err) {
-      return callback(err);
+  try {
+    await fs.rename(oldFilePath, newFilePath);
+
+    console.log("File renamed successfully.");
+  } catch (err) {
+    // Check if file does not exist
+    if (err.code === "ENOENT") {
+      console.error("File not found.");
+    } else {
+      // Handle other errors
+      console.error("Error renaming file:", err);
     }
-    callback(null);
-  });
+  }
 }
 
 /**
- * Deletes a file.
- * @param {string} filePath - The path of the file to be deleted.
- * @param {function} callback - Callback function to handle errors.
+ * Asynchronously lists files in a folder.
+ * @param {string} folderPath - The path to the folder.
+ * @returns {Promise<void>} A Promise that resolves when the files are
+ * listed successfully or rejects with an error.
  */
-function deleteFile(filePath, callback) {
-  fs.unlink(filePath, (err) => {
-    if (err) {
-      return callback(err);
-    }
-    callback(null);
-  });
-}
+async function listFilesInFolder(folderPath) {
+  try {
+    const files = await fs.readdir(folderPath);
 
-/**
- * Deletes a folder and all its contents recursively.
- * @param {string} folderPath - The path of the folder to be deleted.
- */
-function deleteFolderRecursive(folderPath) {
-  if (fs.existsSync(folderPath)) {
-    fs.readdirSync(folderPath).forEach((file, index) => {
-      const curPath = path.join(folderPath, file);
-      if (fs.lstatSync(curPath).isDirectory()) {
-        // Recursive call if directory
-        deleteFolderRecursive(curPath);
-      } else {
-        // Delete file
-        fs.unlinkSync(curPath);
-      }
+    console.log("Files in folder:");
+    files.forEach((file) => {
+      console.log(file);
     });
-    fs.rmdirSync(folderPath); // Delete folder after all contents are deleted
+  } catch (err) {
+    // Check if folder does not exist
+    if (err.code === "ENOENT") {
+      console.error("Folder not found.");
+    } else {
+      // Handle other errors
+      console.error("Error listing files:", err);
+    }
   }
 }
 
 /**
- * Lists all files in a folder.
- * @param {string} folderPath - The path of the folder to list files from.
- * @param {function} callback - Callback function to handle the list of files or errors.
+ * Asynchronously reads a file in a folder.
+ * @param {string} folderPath - The path to the folder containing the file.
+ * @param {string} fileName - The name of the file to read.
+ * @returns {Promise<void>} A Promise that resolves when the file
+ * is read successfully or rejects with an error.
  */
-function listFilesInFolder(folderPath, callback) {
-  fs.readdir(folderPath, (err, files) => {
-    if (err) {
-      return callback(err);
+async function readFileInFolder(folderPath, fileName) {
+  const filePath = path.join(folderPath, fileName);
+
+  try {
+    const data = await fs.readFile(filePath, "utf8");
+
+    console.log("Data in file:", data);
+  } catch (err) {
+    // Check if file does not exist
+    if (err.code === "ENOENT") {
+      console.error("File not found.");
+    } else {
+      // Handle other errors
+      console.error("Error reading file:", err);
     }
-    // Filter out directories from the list
-    const fileList = files.filter((file) =>
-      fs.lstatSync(path.join(folderPath, file)).isFile()
-    );
-    callback(null, fileList);
-  });
+  }
 }
 
 /**
- * Prints the content of a file.
- * @param {string} filePath - The path of the file to read.
- * @param {function} callback - Callback function to handle the file content or errors.
+ * Asynchronously deletes a folder and its contents recursively.
+ * @param {string} folderPath - The path to the folder to delete.
+ * @returns {Promise<void>} A Promise that resolves when the folder
+ * is deleted successfully or rejects with an error.
  */
-function printFileContent(filePath, callback) {
-  fs.readFile(filePath, "utf8", (err, data) => {
-    if (err) {
-      return callback(err);
+async function deleteFolder(folderPath) {
+  try {
+    await fs.rm(folderPath, { recursive: true });
+
+    console.log("Folder deleted successfully.");
+  } catch (err) {
+    // Check if folder does not exist
+    if (err.code === "ENOENT") {
+      console.error("Folder not found.");
+    } else {
+      // Handle other errors
+      console.error("Error deleting folder:", err);
     }
-    callback(null, data);
-  });
+  }
 }
 
-const folderPath = "./myFolder";
-const newFolderPath = "./newFolder";
-const fileName = "example.json";
-const schemaHeadings = ["id", "name", "age", "department"];
-const oldFileName = "example.txt";
-const newFileName = "newExample.txt";
+/**
+ * Asynchronously deletes a file within a folder.
+ * @param {string} folderPath - The path to the folder containing the file.
+ * @param {string} fileName - The name of the file to delete.
+ * @returns {Promise<void>} A Promise that resolves when the file
+ * is deleted successfully or rejects with an error.
+ */
+async function deleteFileInFolder(folderPath, fileName) {
+  const filePath = path.join(folderPath, fileName);
 
-// Create a folder
-createFolder(folderPath, (err) => {
-  if (err) {
-    console.error("Error creating folder:", err);
-    return;
+  try {
+    await fs.unlink(filePath);
+
+    console.log("File deleted successfully.");
+  } catch (err) {
+    // Check if file does not exist
+    if (err.code === "ENOENT") {
+      console.error("File not found.");
+    } else {
+      // Handle other errors
+      console.error("Error deleting file:", err);
+    }
   }
-  console.log("Folder created successfully!");
-});
+}
 
-// Create a file
-createFile(folderPath, fileName, (err) => {
-  if (err) {
-    console.error("Error creating file:", err);
-    return;
-  }
-  console.log("File created successfully!");
-});
+/**
+ * Asynchronously appends an object to a JSON file.
+ * @param {Object} objectData - The object to append to the JSON file.
+ * @param {string} filePath - The path to the JSON file.
+ * @returns {Promise<void>} A Promise that resolves when the object is appended successfully or rejects with an error.
+ */
+async function appendObjectToJSONFile(objectData, filePath) {
+  // Generate a UUID for the object
+  const uuid = uuidv4();
+  const objectWithDataAndUUID = { ...objectData, uuid }; // Include UUID in object data
 
-// // Create table schema
-createTableSchema(folderPath, fileName, schemaHeadings, (err) => {
-  if (err) {
-    console.error("Error creating table schema:", err);
-    return;
-  }
-  console.log("Table schema created successfully!");
-});
+  try {
+    const data = await fs.readFile(filePath, "utf8");
+    let existingData = [];
 
-// // Rename the folder
-renameFolder(folderPath, newFolderPath, (err) => {
-  if (err) {
-    console.error("Error renaming folder:", err);
-    return;
-  }
-  console.log("Folder renamed successfully!");
-});
-
-// Append object data to file
-const employee1 = { id: 1, name: "John", age: 30, department: "IT" };
-const employee2 = { id: 2, name: "Jane", age: 25, department: "CT" };
-appendObjectDataToFile(
-  newFolderPath,
-  fileName,
-  [employee1, employee2], // Pass an array of objects
-  schemaHeadings,
-  (err) => {
-    if (err) {
-      console.error("Error appending object data to file:", err);
+    try {
+      existingData = JSON.parse(data);
+    } catch (parseError) {
+      console.error("Error parsing JSON:", parseError);
       return;
     }
-    console.log("Object data appended to file successfully!");
+
+    // If the existing data is not an array, create one
+    if (!Array.isArray(existingData)) {
+      existingData = [];
+    }
+
+    existingData.push(objectWithDataAndUUID);
+
+    const jsonData = JSON.stringify(existingData, null, 2);
+
+    await fs.writeFile(filePath, jsonData);
+
+    console.log("Object appended to JSON file successfully.");
+  } catch (err) {
+    // Check if file does not exist
+    if (err.code === "ENOENT") {
+      console.error("File not found.");
+    } else {
+      // Handle other errors
+      console.error("Error appending object to JSON file:", err);
+    }
   }
-);
+}
 
-renameFile(folderPath, oldFileName, newFileName, (err) => {
-  if (err) {
-    console.error("Error renaming file:", err);
-    return;
+/**
+ * Asynchronously retrieves data by UUID from a JSON file.
+ * @param {string} filePath - The path to the JSON file.
+ * @param {string} targetUUID - The UUID of the object to retrieve.
+ * @returns {Promise<Object|null>} A Promise that resolves with the object if found, or null if not found or if an error occurs.
+ */
+async function getDataByUUID(filePath, targetUUID) {
+  try {
+    // Read data from JSON file
+    const data = await fs.readFile(filePath, "utf8");
+
+    // Parse JSON data
+    const jsonData = JSON.parse(data);
+
+    // Find object with specified UUID
+    const targetObject = jsonData.find((obj) => obj.uuid === targetUUID);
+
+    // If object not found, throw an error
+    if (!targetObject) {
+      throw new Error("Object with specified UUID not found.");
+    }
+
+    // Return the found object
+    return targetObject;
+  } catch (err) {
+    // Check if file does not exist
+    if (err.code === "ENOENT") {
+      console.error("File not found.");
+    } else {
+      // Handle other errors
+      console.error("Error:", err.message);
+    }
+    return null; // Return null if an error occurs
   }
-  console.log("File renamed successfully!");
-});
+}
 
-const filePath = "./newFolder/newExample.txt";
+/**
+ * Asynchronously deletes data by UUID from a JSON file.
+ * @param {string} filePath - The path to the JSON file.
+ * @param {string} targetUUID - The UUID of the object to delete.
+ * @returns {Promise<void>} A Promise that resolves when the data is
+ *  deleted successfully or rejects with an error.
+ */
+async function deleteDataByUUID(filePath, targetUUID) {
+  try {
+    // Read data from JSON file
+    let data = await fs.readFile(filePath, "utf8");
 
-deleteFile(filePath, (err) => {
-  if (err) {
-    console.error("Error deleting file:", err);
-    return;
+    // Parse JSON data
+    let jsonData = JSON.parse(data);
+
+    // Filter out object with specified UUID
+    let updatedData = jsonData.filter((obj) => obj.uuid !== targetUUID);
+
+    // Write updated data to JSON file
+    await fs.writeFile(filePath, JSON.stringify(updatedData, null, 2));
+
+    console.log("Data deleted successfully.");
+  } catch (err) {
+    // Check if file does not exist
+    if (err.code === "ENOENT") {
+      console.error("File not found.");
+    } else {
+      // Handle other errors
+      console.error("Error deleting data:", err);
+    }
   }
-  console.log("File deleted successfully!");
-});
+}
 
-deleteFolderRecursive(folderPath);
+/**
+ * Asynchronously updates data by UUID in a JSON file.
+ * @param {string} filePath - The path to the JSON file.
+ * @param {string} targetUUID - The UUID of the object to update.
+ * @param {Object} newData - The new data to update.
+ * @returns {Promise<void>} A Promise that resolves when the data
+ *  is updated successfully or rejects with an error.
+ */
+async function updateDataByUUID(filePath, targetUUID, newData) {
+  try {
+    // Read data from JSON file
+    let data = await fs.readFile(filePath, "utf8");
 
-const folderPath2 = "./newFolder";
+    // Parse JSON data
+    let jsonData = JSON.parse(data);
 
-listFilesInFolder(folderPath2, (err, fileList) => {
-  if (err) {
-    console.error("Error listing files:", err);
-    return;
+    // Update data based on UUID
+    let updatedData = jsonData.map((obj) => {
+      if (obj.uuid === targetUUID) {
+        return { ...obj, ...newData };
+      }
+      return obj;
+    });
+
+    // Write updated data to JSON file
+    await fs.writeFile(filePath, JSON.stringify(updatedData, null, 2));
+
+    console.log("Data updated successfully.");
+  } catch (err) {
+    // Check if file does not exist
+    if (err.code === "ENOENT") {
+      console.error("File not found.");
+    } else {
+      // Handle other errors
+      console.error("Error updating data:", err);
+    }
   }
-  console.log("Files in the folder:", fileList);
-});
+}
 
-// const filePath = "./newFolder/example.txt";
+let userOne = { name: "Mugdha", age: 21, city: "Nagpur" };
+let userTwo = { name: "Mansi", age: 25, city: "Kochi" };
+let userThree = { name: "Mitali", age: 20, city: "Banglore" };
 
-printFileContent(filePath, (err, content) => {
-  if (err) {
-    console.error("Error reading file:", err);
-    return;
-  }
-  console.log("Content of the file:");
-  console.log(content);
-});
+// Example usage:
+// createFolder("myFolder");
+// createJSONFile("./myFolder/data.json");
+// appendObjectToJSONFile(userThree, "./myFolder/data.json");
+// updateFolderName("./myFolder", "./newFolder");
+// renameFileInFolder("./newFolder", "data.json", "dataaa.json");
+// listFilesInFolder("./newFolder");
+// readFileInFolder("./newFolder", "dataaa.json");
+// deleteFolder("./newFolder");
+// deleteFileInFolder("./newFolder", "dataaa.json");
+// getDataByUUID(
+//   "./newFolder/dataaa.json",
+//   "fc345e52-a208-46de-85f1-6584a6f467fc"
+// );
+// deleteDataByUUID("./newFolder/dataaa.json", "fc345e52-a208-46de-85f1-6584a6f467fc");
+// updateDataByUUID("./newFolder/dataaa.json", "69fac8cf-69fa-443f-b6a7-d7dcb820e0f7", { name: "Mugdha", age: 35, city: "Hyderabad" });
